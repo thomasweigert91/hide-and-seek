@@ -1,0 +1,40 @@
+{
+  "name": "hide-and-seek",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/thomasweigert91/hide-and-seek#readme",
+  "bugs": {
+    "url": "https://github.com/thomasweigert91/hide-and-seek/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thomasweigert91/hide-and-seek.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"DB,BACKEND,FRONTEND\" -c \"yellow,blue,green\" \"npm run dev --prefix packages/db\" \"npm run start:dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:db": "npm run dev --prefix packages/db",
+    "build": "npm run build --prefix packages/db && npm run build --prefix backend && npm run build --prefix frontend",
+    "db:test": "npm run db:test --prefix packages/db",
+    "db:generate": "npm run db:generate --prefix packages/db",
+    "db:push": "npm run db:push --prefix packages/db",
+    "db:migrate": "npm run db:migrate --prefix packages/db",
+    "db:studio": "npm run db:studio --prefix packages/db"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}
