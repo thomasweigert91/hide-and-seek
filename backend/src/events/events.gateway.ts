@@ -57,50 +57,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('move')
-  handleMove(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() body: { direction: Direction },
-  ) {
-    const { roomId, role } = socket.data;
-
-    if (!role || !roomId) return;
-
-    const updatedState = this.eventsService.applyMove(
-      roomId,
-      role,
-      body.direction,
-    );
-
-    if (updatedState) {
-      if (updatedState.status === 'FINISHED') {
-        this.stopTimer(roomId);
-      }
-
-      this.server.to(roomId).emit('gameState', updatedState);
-    }
-  }
-
-  handleDisconnect(socket: Socket) {
-    const roomId = socket.data.roomId;
-
-    if (roomId === this.waitingRoomId) {
-      this.waitingRoomId = null;
-      console.log('Waiting player has left, room resetted');
-      return;
-    }
-
-    if (roomId) {
-      this.stopTimer(roomId);
-      this.server.to(roomId).emit('playerLeft', {
-        message: 'Your opponent has quit. You won!',
-      });
-
-      this.eventsService.deleteGame(roomId);
-    }
-  }
-
-  handleConnection(socket: Socket) {
+  private joinMatchmaking(socket: Socket) {
     if (this.waitingRoomId === null) {
       //Player 1 waits for opponent
       const roomId = crypto.randomUUID();
@@ -133,5 +90,62 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.startTimer(roomId);
     }
+  }
+
+  @SubscribeMessage('move')
+  handleMove(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { direction: Direction },
+  ) {
+    const { roomId, role } = socket.data;
+
+    if (!role || !roomId) return;
+
+    const updatedState = this.eventsService.applyMove(
+      roomId,
+      role,
+      body.direction,
+    );
+
+    if (updatedState) {
+      if (updatedState.status === 'FINISHED') {
+        this.stopTimer(roomId);
+      }
+
+      this.server.to(roomId).emit('gameState', updatedState);
+    }
+  }
+
+  @SubscribeMessage('restart')
+  handleRestart(@ConnectedSocket() socket: Socket) {
+    const oldRoomId = socket.data.roomId;
+
+    if (oldRoomId) {
+      socket.leave(oldRoomId);
+    }
+    this.joinMatchmaking(socket);
+  }
+
+  handleDisconnect(socket: Socket) {
+    const roomId = socket.data.roomId;
+
+    if (roomId === this.waitingRoomId) {
+      this.waitingRoomId = null;
+      console.log('Waiting player has left, room resetted');
+      return;
+    }
+
+    if (roomId) {
+      this.stopTimer(roomId);
+      this.server.to(roomId).emit('playerLeft', {
+        message: 'Your opponent has quit. You won!',
+      });
+
+      this.eventsService.deleteGame(roomId);
+    }
+  }
+
+  handleConnection(socket: Socket) {
+    this.joinMatchmaking(socket);
   }
 }

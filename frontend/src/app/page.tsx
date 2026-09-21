@@ -68,19 +68,34 @@ export default function Home() {
 
   useKeyboardMovement(socket, gameState?.status === "RUNNING");
 
+  const handleRestart = () => {
+    setGameState(null);
+    setRole(null);
+    setStatusMessage("Seeking New Game...");
+    socket?.emit("restart");
+  };
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
         <h1 className="text-2xl font-bold">Hide and Seek</h1>
         <p className="text-zinc-400">{statusMessage}</p>
         <p>Time Left: {gameState?.timeRemaining}</p>
+        <button
+          className="border-2 border-amber-300 p-2 text-amber-200 rounded-md"
+          onClick={handleRestart}
+        >
+          RESTART
+        </button>
         {gameState && (
-          <GameBoard
-            gridSize={gameState.gridSize}
-            seekerPos={gameState.seekerPos}
-            hiderPos={gameState.hiderPos}
-            myRole={role ?? "SEEKER"}
-          />
+          <>
+            <GameBoard
+              gridSize={gameState.gridSize}
+              seekerPos={gameState.seekerPos}
+              hiderPos={gameState.hiderPos}
+              myRole={role ?? "SEEKER"}
+            />
+          </>
         )}
       </main>
     </div>
