@@ -30,4 +30,27 @@ export default function LoginPage() {
       }
     });
   }
+
+  return (
+    <form action={handleFormAction} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium">E-Mail</label>
+        <input name="email" type="email" required className="..." />
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Passwort</label>
+        <input name="password" type="password" required className="..." />
+      </div>
+      <button type="submit" disabled={isPending} className="...">
+        {isPending
+          ? "Bitte warten..."
+          : isRegistering
+            ? "Registrieren"
+            : "Anmelden"}
+      </button>
+      <button type="button" onClick={() => setIsRegistering(!isRegistering)}>
+        Wechseln zu {isRegistering ? "Anmelden" : "Registrieren"}
+      </button>
+    </form>
+  );
 }
