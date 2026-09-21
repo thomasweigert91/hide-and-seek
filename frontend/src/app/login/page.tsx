@@ -33,6 +33,11 @@ export default function LoginPage() {
 
   return (
     <form action={handleFormAction} className="space-y-4">
+      {errorMsg && (
+        <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+          {errorMsg}
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium">E-Mail</label>
         <input name="email" type="email" required className="..." />
