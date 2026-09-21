@@ -14,9 +14,48 @@ import { Direction, EventsService } from './events.service';
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
+  constructor(private readonly eventsService: EventsService) {}
+
   private waitingRoomId: string | null = null;
 
-  constructor(private readonly eventsService: EventsService) {}
+  private timers = new Map<string, NodeJS.Timeout>();
+
+  private startTimer(roomId: string) {
+    this.stopTimer(roomId);
+
+    const timer = setInterval(() => {
+      const state = this.eventsService.getGame(roomId);
+
+      if (!state || state.status !== 'RUNNING') {
+        this.stopTimer(roomId);
+        return;
+      }
+
+      state.timeRemaining -= 1;
+
+      if (state.timeRemaining <= 0) {
+        state.status = 'FINISHED';
+        state.winner = 'HIDER';
+        this.stopTimer(roomId);
+
+        this.server.to(roomId).emit('gameState', state);
+      } else {
+        this.server
+          .to(roomId)
+          .emit('timer', { timeRemaining: state.timeRemaining });
+      }
+    }, 1000);
+    this.timers.set(roomId, timer);
+  }
+
+  private stopTimer(roomId: string) {
+    const timer = this.timers.get(roomId);
+
+    if (timer) {
+      clearInterval(timer);
+      this.timers.delete(roomId);
+    }
+  }
 
   @SubscribeMessage('move')
   handleMove(
@@ -34,6 +73,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     if (updatedState) {
+      if (updatedState.status === 'FINISHED') {
+        this.stopTimer(roomId);
+      }
+
       this.server.to(roomId).emit('gameState', updatedState);
     }
   }
@@ -48,6 +91,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (roomId) {
+      this.stopTimer(roomId);
       this.server.to(roomId).emit('playerLeft', {
         message: 'Your opponent has quit. You won!',
       });
@@ -86,6 +130,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const initialState = this.eventsService.createGame(roomId);
       this.server.to(roomId).emit('gameStarted', initialState);
+
+      this.startTimer(roomId);
     }
   }
 }

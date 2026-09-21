@@ -55,6 +55,12 @@ export default function Home() {
       setStatusMessage(data.message);
     });
 
+    newSocket.on("timer", (data: { timeRemaining: number }) => {
+      setGameState((prev) =>
+        prev ? { ...prev, timeRemaining: data.timeRemaining } : null,
+      );
+    });
+
     return () => {
       newSocket.disconnect();
     };
@@ -67,6 +73,7 @@ export default function Home() {
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
         <h1 className="text-2xl font-bold">Hide and Seek</h1>
         <p className="text-zinc-400">{statusMessage}</p>
+        <p>Time Left: {gameState?.timeRemaining}</p>
         {gameState && (
           <GameBoard
             gridSize={gameState.gridSize}
