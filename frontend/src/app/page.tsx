@@ -81,12 +81,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold">Hide and Seek</h1>
         <p className="text-zinc-400">{statusMessage}</p>
         <p>Time Left: {gameState?.timeRemaining}</p>
-        <button
-          className="border-2 border-amber-300 p-2 text-amber-200 rounded-md"
-          onClick={handleRestart}
-        >
-          RESTART
-        </button>
+
         {gameState && (
           <>
             <GameBoard
@@ -95,6 +90,12 @@ export default function Home() {
               hiderPos={gameState.hiderPos}
               myRole={role ?? "SEEKER"}
             />
+            <button
+              className="border-2 border-amber-300 p-2 text-amber-200 rounded-md"
+              onClick={handleRestart}
+            >
+              RESTART
+            </button>
           </>
         )}
       </main>
