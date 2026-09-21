@@ -131,12 +131,34 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('restart')
   handleRestart(@ConnectedSocket() socket: Socket) {
-    const oldRoomId = socket.data.roomId;
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
 
-    if (oldRoomId) {
-      socket.leave(oldRoomId);
+    const room = this.server.sockets.adapter.rooms.get(roomId);
+    if (!room || room.size < 2) {
+      socket.emit('error', {
+        message: 'A second player is needed to restart the game.',
+      });
+      return;
     }
-    this.joinMatchmaking(socket);
+
+    // Swap roles for the new round
+    for (const socketId of room) {
+      const clientSocket = this.server.sockets.sockets.get(socketId);
+      if (clientSocket) {
+        const newRole =
+          clientSocket.data.role === 'SEEKER' ? 'HIDER' : 'SEEKER';
+        clientSocket.data.role = newRole;
+        clientSocket.emit('roleAssigned', { role: newRole, roomId });
+      }
+    }
+
+    // Reset game state and restart timer
+    const initialState = this.eventsService.createGame(roomId);
+    this.server.to(roomId).emit('gameStarted', initialState);
+    this.startTimer(roomId);
+
+    console.log(`[Restart] Match in room ${roomId} restarted with swapped roles!`);
   }
 
   @SubscribeMessage('leaveRoom')

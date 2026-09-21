@@ -109,6 +109,10 @@ export default function GameRoomPage({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleRestart() {
+    socket?.emit("restart");
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 p-4 text-white">
       <div className="mb-6 flex flex-col items-center gap-2 text-center">
@@ -136,6 +140,17 @@ export default function GameRoomPage({
         {gameState?.status === "RUNNING" && (
           <div className="mt-2 rounded-lg bg-zinc-900 px-4 py-1.5 font-mono text-lg font-bold border border-zinc-800">
             ⏱️ {gameState.timeRemaining}s
+          </div>
+        )}
+
+        {gameState?.status === "FINISHED" && (
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              onClick={handleRestart}
+              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-95"
+            >
+              🔄 Nochmal spielen (Restart)
+            </button>
           </div>
         )}
       </div>
