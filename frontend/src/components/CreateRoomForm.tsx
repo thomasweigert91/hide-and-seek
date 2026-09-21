@@ -21,15 +21,10 @@ export const CreateRoomForm = ({ socket }: { socket: Socket | null }) => {
       return { error: "Please insert a roomname" };
     }
 
-    if (!socket) {
-      return { error: "No connection to server" };
-    }
-
-    socket.emit("createRoom", { roomName });
-
-    socket.once("roleAssigned", ({ roomId }) => {
-      router.push(`/lobby/${roomId}`);
-    });
+    const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    router.push(
+      `/lobby/${roomId}?host=true&name=${encodeURIComponent(roomName)}`,
+    );
 
     return { error: null };
   }

@@ -155,6 +155,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.eventsService.deleteGame(roomId);
+      this.rooms.delete(roomId);
+      this.broadcastRoomlist();
     }
   }
 
@@ -165,10 +167,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('createRoom')
   handleCreateRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() body: { roomName: string },
+    @MessageBody() body: { roomName: string; roomId?: string },
   ) {
-    const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const roomName = body.roomName.trim() || `Room ${roomId}`;
+    const roomId = (
+      body.roomId || Math.random().toString(36).substring(2, 6)
+    ).toUpperCase();
+    const roomName = body.roomName?.trim() || `Room ${roomId}`;
 
     socket.join(roomId);
     socket.data.roomId = roomId;
@@ -210,6 +214,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     socket.join(roomId);
     socket.data.roomId = roomId;
     socket.data.role = 'HIDER';
+
+    roomInfo.playerCount = 2;
+    roomInfo.status = 'IN_GAME';
+    this.broadcastRoomlist();
 
     socket.emit('roleAssigned', { role: 'HIDER', roomId });
 

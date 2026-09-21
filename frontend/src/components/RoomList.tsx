@@ -13,8 +13,6 @@ export type RoomListProps = {
 };
 
 export const RoomList = ({ rooms }: RoomListProps) => {
-  if (!rooms.length) return <div>Test</div>;
-
   return (
     <div className="overflow-hidden rounded-2xl border-zinc-800 bg-zinc-900 shadow-xl p-8">
       <table className="w-full text-left border-collapse">
@@ -27,10 +25,12 @@ export const RoomList = ({ rooms }: RoomListProps) => {
             <th className="px-6 py-3.5">Action</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-zinc-800/60 text-sm">
           {rooms.length === 0 ? (
             <tr>
-              <td>Currently no rooms open...</td>
+              <td colSpan={5} className="py-8 text-center text-zinc-500">
+                There are no rooms open currently. Create the first room!
+              </td>
             </tr>
           ) : (
             rooms.map(({ roomName, id, playerCount, status }) => {

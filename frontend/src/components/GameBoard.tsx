@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { FC } from "react";
 
 type GameBoardProps = {
-  gridSize: number;
-  seekerPos: { x: number; y: number };
-  hiderPos: { x: number; y: number };
-  myRole: "SEEKER" | "HIDER";
+  gridSize?: number;
+  seekerPos?: { x: number; y: number };
+  hiderPos?: { x: number; y: number };
+  myRole?: "SEEKER" | "HIDER";
 };
 
 export const GameBoard: FC<GameBoardProps> = ({
@@ -20,14 +21,14 @@ export const GameBoard: FC<GameBoardProps> = ({
   });
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6">
       <div
         className="grid grid-cols-10 grid-rows-10 gap-1 rounded-xl border-4 border-zinc-800 bg-zinc-950 p-2 shadow-2xl"
         style={{ width: "min(85vw, 500px)", height: "min(85vw, 500px)" }}
       >
         {cells.map(({ x, y }) => {
-          const isSeeker = seekerPos.x === x && seekerPos.y === y;
-          const isHider = hiderPos.x === x && hiderPos.y === y;
+          const isSeeker = seekerPos?.x === x && seekerPos?.y === y;
+          const isHider = hiderPos?.x === x && hiderPos?.y === y;
           return (
             <div
               key={`${x}-${y}`}
@@ -50,6 +51,14 @@ export const GameBoard: FC<GameBoardProps> = ({
           );
         })}
       </div>
+
+      <Link
+        href="/"
+        className="flex items-center gap-2 rounded-xl border border-zinc-700/80 bg-zinc-900/90 px-5 py-2.5 text-sm font-semibold text-zinc-300 shadow-md transition-all hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"
+      >
+        ← Back to Dashboard
+      </Link>
     </div>
   );
 };
+

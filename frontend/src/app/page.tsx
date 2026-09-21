@@ -1,66 +1,31 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { CreateRoomForm } from "@/components/CreateRoomForm";
-import { GameBoard } from "@/components/GameBoard";
-import { RoomList } from "@/components/RoomList";
-import { useKeyboardMovement } from "@/hooks/useKeyboardMovement";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { RoomList } from "@/components/RoomList";
+import { CreateRoomForm } from "@/components/CreateRoomForm";
 
-type Position = { x: number; y: number };
-type Role = "SEEKER" | "HIDER";
-
-type GameState = {
-  status: "WAITING" | "RUNNING" | "FINISHED";
-  gridSize: number;
-  seekerPos: Position;
-  hiderPos: Position;
-  winner: Role | null;
-  timeRemaining: number;
+type RoomInfo = {
+  id: string;
+  roomName: string;
+  playerCount: number;
+  status: "WAITING" | "IN_GAME";
 };
 
 export default function Home() {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
-  const [statusMessage, setStatusMessage] = useState("Connecting to server...");
+  const [rooms, setRooms] = useState<RoomInfo[]>([]);
 
   useEffect(() => {
     const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8000";
     const newSocket = io(socketUrl);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSocket(newSocket);
 
-    newSocket.on("waitingForOpponent", (data: { role: Role }) => {
-      setRole(data.role);
-      setStatusMessage("Waiting for Player 2");
-    });
-
-    newSocket.on("roleAssigned", (data: { role: Role }) => {
-      setRole(data.role);
-    });
-
-    newSocket.on("gameStarted", (state: GameState) => {
-      setGameState(state);
-      setStatusMessage("Game has started");
-    });
-
-    newSocket.on("gameState", (state: GameState) => {
-      setGameState(state);
-      if (state.status === "FINISHED") {
-        setStatusMessage(`Game is over. Winner: ${state.winner}`);
-      }
-    });
-
-    newSocket.on("playerLeft", (data: { message: string }) => {
-      setStatusMessage(data.message);
-    });
-
-    newSocket.on("timer", (data: { timeRemaining: number }) => {
-      setGameState((prev) =>
-        prev ? { ...prev, timeRemaining: data.timeRemaining } : null,
-      );
+    // Live-Update der Raumtabelle
+    newSocket.on("roomsList", (list: RoomInfo[]) => {
+      setRooms(list);
     });
 
     return () => {
@@ -68,26 +33,28 @@ export default function Home() {
     };
   }, []);
 
-  useKeyboardMovement(socket, gameState?.status === "RUNNING");
-
-  const handleRestart = () => {
-    setGameState(null);
-    setRole(null);
-    setStatusMessage("Seeking New Game...");
-    socket?.emit("restart");
-  };
-
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <h1 className="text-2xl font-bold">Hide and Seek</h1>
-        <CreateRoomForm socket={socket} />
-        <RoomList
-          rooms={[
-            { id: "A2FF", playerCount: 1, roomName: "Test", status: "WAITING" },
-          ]}
-        />
-      </main>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 p-6 text-white">
+      <div className="w-full max-w-3xl space-y-6">
+        {/* Header & Raum erstellen Formular */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">
+              Hide & Seek Lobbies
+            </h1>
+            <p className="text-sm text-zinc-400">
+              Choose a room or create your own.
+            </p>
+          </div>
+
+          <div className="w-full sm:w-80">
+            <CreateRoomForm socket={socket} />
+          </div>
+        </div>
+
+        {/* Die Tabelle aller offenen Räume */}
+        <RoomList rooms={rooms} />
+      </div>
     </div>
   );
 }
