@@ -10,6 +10,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Direction, EventsService } from './events.service';
 
+type RoomInfo = {
+  id: string;
+  roomName: string;
+  playerCount: number;
+  status: 'WAITING' | 'IN_GAME';
+};
+
 @WebSocketGateway({ cors: { origin: '*' } })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -19,6 +26,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private waitingRoomId: string | null = null;
 
   private timers = new Map<string, NodeJS.Timeout>();
+  private rooms = new Map<string, RoomInfo>();
+
+  private broadcastRoomlist() {
+    const list = Array.from(this.rooms.values());
+    this.server.emit('roomsList', list);
+  }
 
   private startTimer(roomId: string) {
     this.stopTimer(roomId);
@@ -146,6 +159,66 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleConnection(socket: Socket) {
-    this.joinMatchmaking(socket);
+    socket.emit('roomsList', Array.from(this.rooms.values()));
+  }
+
+  @SubscribeMessage('createRoom')
+  handleCreateRoom(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { roomName: string },
+  ) {
+    const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const roomName = body.roomName.trim() || `Room ${roomId}`;
+
+    socket.join(roomId);
+    socket.data.roomId = roomId;
+    socket.data.role = 'SEEKER';
+
+    this.rooms.set(roomId, {
+      id: roomId,
+      roomName,
+      playerCount: 1,
+      status: 'WAITING',
+    });
+
+    socket.emit('roleAssigned', { role: 'SEEKER', roomId });
+    this.broadcastRoomlist();
+
+    console.log(`[Lobby] Room ${roomId} created by Player ${socket.id}`);
+  }
+
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { roomId: string },
+  ) {
+    const roomId = body.roomId.toUpperCase();
+    const roomInfo = this.rooms.get(roomId);
+
+    if (!roomInfo) {
+      socket.emit('error', {
+        message: `Room ${roomId} does not exist anymore`,
+      });
+      return;
+    }
+
+    if (roomInfo.playerCount >= 2 || roomInfo.status === 'IN_GAME') {
+      socket.emit('error', { message: 'The room is full' });
+      return;
+    }
+
+    socket.join(roomId);
+    socket.data.roomId = roomId;
+    socket.data.role = 'HIDER';
+
+    socket.emit('roleAssigned', { role: 'HIDER', roomId });
+
+    const initialState = this.eventsService.createGame(roomId);
+    this.server.to(roomId).emit('gameStarted', initialState);
+    this.startTimer(roomId);
+
+    console.log(
+      `[Lobby] Player ${socket.id} connected as HIDER into room ${roomId}. Game starts now!`,
+    );
   }
 }

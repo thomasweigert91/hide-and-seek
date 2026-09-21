@@ -1,9 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { CreateRoomForm } from "@/components/CreateRoomForm";
 import { GameBoard } from "@/components/GameBoard";
-import { RoomList } from "@/components/RoomList";
 import { useKeyboardMovement } from "@/hooks/useKeyboardMovement";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
@@ -20,7 +18,7 @@ type GameState = {
   timeRemaining: number;
 };
 
-export default function Home() {
+export default function LobbyPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [role, setRole] = useState<Role | null>(null);
@@ -81,12 +79,25 @@ export default function Home() {
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
         <h1 className="text-2xl font-bold">Hide and Seek</h1>
-        <CreateRoomForm socket={socket} />
-        <RoomList
-          rooms={[
-            { id: "A2FF", playerCount: 1, roomName: "Test", status: "WAITING" },
-          ]}
-        />
+        <p className="text-zinc-400">{statusMessage}</p>
+        <p>Time Left: {gameState?.timeRemaining}</p>
+
+        {gameState && (
+          <>
+            <GameBoard
+              gridSize={gameState.gridSize}
+              seekerPos={gameState.seekerPos}
+              hiderPos={gameState.hiderPos}
+              myRole={role ?? "SEEKER"}
+            />
+            <button
+              className="border-2 border-amber-300 p-2 text-amber-200 rounded-md"
+              onClick={handleRestart}
+            >
+              RESTART
+            </button>
+          </>
+        )}
       </main>
     </div>
   );
