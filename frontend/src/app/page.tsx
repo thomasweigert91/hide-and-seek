@@ -25,7 +25,9 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState("Connecting to server...");
 
   useEffect(() => {
-    const newSocket = io("http://localhost:8000");
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8000";
+    const newSocket = io(socketUrl);
     setSocket(newSocket);
 
     newSocket.on("waitingForOpponent", (data: { role: Role }) => {
