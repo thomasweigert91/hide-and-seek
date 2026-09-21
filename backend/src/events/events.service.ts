@@ -32,11 +32,11 @@ const DELTAS: Record<Direction, Delta> = {
 export class EventsService {
   private games = new Map<string, GameState>();
 
-  createGame(roomId: string): GameState {
+  createGame(roomId: string, gridSize: number = 10): GameState {
     const initialState: GameState = {
-      gridSize: 10,
+      gridSize,
       seekerPos: { x: 0, y: 0 },
-      hiderPos: { x: 9, y: 9 },
+      hiderPos: { x: gridSize - 1, y: gridSize - 1 },
       status: 'RUNNING',
       winner: null,
       timeRemaining: 60,

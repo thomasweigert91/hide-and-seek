@@ -43,9 +43,11 @@ export default function GameRoomPage({
 
     const roomName = searchParams.get("name") || `Room ${roomId}`;
 
+    const gridSize = Number(searchParams.get("gridSize")) || 10;
+
     newSocket.on("connect", () => {
       if (isHost) {
-        newSocket.emit("createRoom", { roomId, roomName });
+        newSocket.emit("createRoom", { roomId, roomName, gridSize });
         setStatusMessage("Warte auf zweiten Spieler...");
       } else {
         newSocket.emit("joinRoom", { roomId });
