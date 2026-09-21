@@ -78,11 +78,25 @@ export default function GameRoomPage({
       );
     });
 
+    newSocket.on("playerLeft", (data: { message: string }) => {
+      setStatusMessage(data.message);
+      setGameState((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "FINISHED",
+              winner: null,
+            }
+          : null,
+      );
+    });
+
     newSocket.on("error", (err: { message: string }) => {
       setStatusMessage(`Fehler: ${err.message}`);
     });
 
     return () => {
+      newSocket.emit("leaveRoom");
       newSocket.disconnect();
     };
   }, [roomId, isHost]);

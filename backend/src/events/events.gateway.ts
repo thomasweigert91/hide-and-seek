@@ -139,6 +139,23 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.joinMatchmaking(socket);
   }
 
+  @SubscribeMessage('leaveRoom')
+  handleLeaveRoom(@ConnectedSocket() socket: Socket) {
+    const roomId = socket.data.roomId;
+    if (roomId) {
+      this.stopTimer(roomId);
+      this.server.to(roomId).emit('playerLeft', {
+        message: 'Your opponent left the game. You won!',
+      });
+      this.eventsService.deleteGame(roomId);
+      this.rooms.delete(roomId);
+      this.broadcastRoomlist();
+      socket.leave(roomId);
+      socket.data.roomId = null;
+      socket.data.role = null;
+    }
+  }
+
   handleDisconnect(socket: Socket) {
     const roomId = socket.data.roomId;
 
