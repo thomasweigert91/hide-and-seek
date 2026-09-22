@@ -10,6 +10,8 @@ export type Role = "SEEKER" | "HIDER";
 
 export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
+export type TileKind = "FLOOR" | "WALL" | "ICE";
+
 export type GameState = {
   status: "WAITING" | "RUNNING" | "FINISHED";
   gridSize: number;
@@ -17,6 +19,7 @@ export type GameState = {
   hiderPos: Position;
   winner: Role | null;
   timeRemaining: number;
+  terrain: TileKind[][];
 };
 
 export type ConnectRoomOptions = {

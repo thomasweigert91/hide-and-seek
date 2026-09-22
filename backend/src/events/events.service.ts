@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 export type Role = 'SEEKER' | 'HIDER';
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+export type TileKind = 'FLOOR' | 'WALL' | 'ICE';
 export type GameStatus = 'WAITING' | 'RUNNING' | 'FINISHED';
 export type Delta = { dx: number; dy: number };
 
@@ -17,6 +18,7 @@ type GameState = {
   hiderPos: Position;
   timeRemaining: number;
   winner: Role | null;
+  terrain: TileKind[][];
 };
 
 const DELTAS: Record<Direction, Delta> = {
@@ -31,6 +33,13 @@ export class EventsService {
   private games = new Map<string, GameState>();
 
   createGame(roomId: string, gridSize: number = 10): GameState {
+    const terrain: TileKind[][] = Array.from({ length: gridSize }, () =>
+      Array.from({ length: gridSize }, () => 'FLOOR'),
+    );
+    const wallY = Math.floor(gridSize / 2);
+    for (let x = 1; x <= gridSize - 3; x++) {
+      terrain[wallY][x] = 'WALL';
+    }
     const initialState: GameState = {
       gridSize,
       seekerPos: { x: 0, y: 0 },
@@ -38,6 +47,7 @@ export class EventsService {
       status: 'RUNNING',
       winner: null,
       timeRemaining: 60,
+      terrain,
     };
 
     this.games.set(roomId, initialState);
@@ -69,6 +79,10 @@ export class EventsService {
       newY < 0 ||
       newY >= state.gridSize
     ) {
+      return state;
+    }
+
+    if (state.terrain[newY][newX] === 'WALL') {
       return state;
     }
 

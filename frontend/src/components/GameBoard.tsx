@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { FC } from "react";
+import { Tile } from "./Tile";
+import { TileKind } from "@/store/useGameStore";
 
 type GameBoardProps = {
   gridSize?: number;
   seekerPos?: { x: number; y: number };
   hiderPos?: { x: number; y: number };
   myRole?: "SEEKER" | "HIDER";
+  terrain?: TileKind[][];
 };
 const VISION_RADIUS = 1;
 
@@ -14,6 +17,7 @@ export const GameBoard: FC<GameBoardProps> = ({
   seekerPos = { x: 0, y: 5 },
   hiderPos = { x: 6, y: 7 },
   myRole,
+  terrain,
 }) => {
   const cells = Array.from({ length: gridSize * gridSize }, (_, index) => {
     const x = index % gridSize;
@@ -61,15 +65,12 @@ export const GameBoard: FC<GameBoardProps> = ({
             seekerPos?.y === y &&
             (myRole === "SEEKER" || inVision);
           return (
-            <div
+            <Tile
               key={`${x}-${y}`}
-              className={`relative flex items-center justify-center rounded transition-all duration-200 border ${
-                !inVision
-                  ? "bg-zinc-950 border-zinc-900 opacity-30"
-                  : (x + y) % 2 === 0
-                    ? "bg-zinc-900/60 border-zinc-800/30"
-                    : "bg-zinc-800/40 border-zinc-800/30"
-              }`}
+              kind={terrain?.[y]?.[x] ?? "FLOOR"}
+              x={x}
+              y={y}
+              fogged={!inVision}
             >
               {showSeeker && (
                 <div
@@ -86,7 +87,7 @@ export const GameBoard: FC<GameBoardProps> = ({
                   🥷
                 </div>
               )}
-            </div>
+            </Tile>
           );
         })}
       </div>
