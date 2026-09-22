@@ -15,6 +15,7 @@ type RoomInfo = {
   roomName: string;
   playerCount: number;
   status: 'WAITING' | 'IN_GAME';
+  gridSize: number;
 };
 
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -70,41 +71,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private joinMatchmaking(socket: Socket) {
-    if (this.waitingRoomId === null) {
-      //Player 1 waits for opponent
-      const roomId = crypto.randomUUID();
-      socket.join(roomId);
-
-      this.waitingRoomId = roomId;
-
-      socket.data.roomId = roomId;
-      socket.data.role = 'SEEKER';
-
-      console.log(`socket id: ${socket.id}, room: ${roomId}`);
-      socket.emit('waitingForOpponent', { role: 'SEEKER', roomId });
-    } else {
-      // Player 2 connected, match starts
-      const roomId = this.waitingRoomId;
-      socket.join(roomId);
-      this.waitingRoomId = null;
-
-      console.log(
-        `socket id: ${socket.id} in preexisting room: ${roomId}, Match starts!`,
-      );
-
-      socket.data.roomId = roomId;
-      socket.data.role = 'HIDER';
-
-      socket.emit('roleAssigned', { role: 'HIDER', roomId });
-
-      const initialState = this.eventsService.createGame(roomId);
-      this.server.to(roomId).emit('gameStarted', initialState);
-
-      this.startTimer(roomId);
-    }
-  }
-
   @SubscribeMessage('move')
   handleMove(
     @ConnectedSocket() socket: Socket,
@@ -130,35 +96,34 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('restart')
-  handleRestart(@ConnectedSocket() socket: Socket) {
+  async handleRestart(@ConnectedSocket() socket: Socket) {
     const roomId = socket.data.roomId;
     if (!roomId) return;
 
-    const room = this.server.sockets.adapter.rooms.get(roomId);
-    if (!room || room.size < 2) {
+    const sockets = await this.server.in(roomId).fetchSockets();
+    if (sockets.length < 2) {
       socket.emit('error', {
         message: 'A second player is needed to restart the game.',
       });
       return;
     }
 
-    // Swap roles for the new round
-    for (const socketId of room) {
-      const clientSocket = this.server.sockets.sockets.get(socketId);
-      if (clientSocket) {
-        const newRole =
-          clientSocket.data.role === 'SEEKER' ? 'HIDER' : 'SEEKER';
-        clientSocket.data.role = newRole;
-        clientSocket.emit('roleAssigned', { role: newRole, roomId });
-      }
-    }
+    const [p1, p2] = sockets;
+    const p1NewRole = p1.data.role === 'SEEKER' ? 'HIDER' : 'SEEKER';
+    const p2NewRole = p1NewRole === 'SEEKER' ? 'HIDER' : 'SEEKER';
 
-    // Reset game state and restart timer
-    const initialState = this.eventsService.createGame(roomId);
+    p1.data.role = p1NewRole;
+    p2.data.role = p2NewRole;
+    p1.emit('roleAssigned', { role: p1NewRole, roomId });
+    p2.emit('roleAssigned', { role: p2NewRole, roomId });
+
+    const roomInfo = this.eventsService.getGame(roomId);
+    const initialState = this.eventsService.createGame(
+      roomId,
+      roomInfo?.gridSize,
+    );
     this.server.to(roomId).emit('gameStarted', initialState);
     this.startTimer(roomId);
-
-    console.log(`[Restart] Match in room ${roomId} restarted with swapped roles!`);
   }
 
   @SubscribeMessage('leaveRoom')
@@ -206,7 +171,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('createRoom')
   handleCreateRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() body: { roomName: string; roomId?: string },
+    @MessageBody()
+    body: { roomName: string; roomId?: string; gridSize: number },
   ) {
     const roomId = (
       body.roomId || Math.random().toString(36).substring(2, 6)
@@ -222,6 +188,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roomName,
       playerCount: 1,
       status: 'WAITING',
+      gridSize: body.gridSize,
     });
 
     socket.emit('roleAssigned', { role: 'SEEKER', roomId });
@@ -260,7 +227,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     socket.emit('roleAssigned', { role: 'HIDER', roomId });
 
-    const initialState = this.eventsService.createGame(roomId);
+    const initialState = this.eventsService.createGame(
+      roomId,
+      roomInfo.gridSize,
+    );
     this.server.to(roomId).emit('gameStarted', initialState);
     this.startTimer(roomId);
 

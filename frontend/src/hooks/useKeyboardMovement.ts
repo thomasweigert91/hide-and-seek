@@ -1,16 +1,38 @@
 import { useEffect } from "react";
 import { Socket } from "socket.io-client";
+import { Direction, useGameStore } from "@/store/useGameStore";
 
-export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
+export type { Direction };
 
-export function useKeyboardMovement(socket: Socket | null, isMyTurn = true) {
+export function useKeyboardMovement(
+  socketOrEnabled?: Socket | boolean | null,
+  isMyTurn = true,
+) {
+  const storeMove = useGameStore((state) => state.move);
+  const storeSocket = useGameStore((state) => state.socket);
+
+  const isSocketProvided =
+    socketOrEnabled !== undefined &&
+    socketOrEnabled !== null &&
+    typeof socketOrEnabled === "object";
+
+  const enabled =
+    typeof socketOrEnabled === "boolean" ? socketOrEnabled : isMyTurn;
+
+  const activeSocket = isSocketProvided ? socketOrEnabled : storeSocket;
+
   useEffect(() => {
-    if (!socket || !isMyTurn) return;
+    if (!enabled) return;
+    if (isSocketProvided && !activeSocket) return;
+    if (!isSocketProvided && !storeSocket) return;
 
     function onKeyDown(event: KeyboardEvent) {
       const keyName = event.key;
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(keyName))
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(keyName)
+      ) {
         event.preventDefault();
+      }
 
       let direction: Direction | null = null;
 
@@ -30,10 +52,15 @@ export function useKeyboardMovement(socket: Socket | null, isMyTurn = true) {
       }
 
       if (direction) {
-        socket?.emit("move", { direction });
+        if (isSocketProvided) {
+          activeSocket?.emit("move", { direction });
+        } else {
+          storeMove(direction);
+        }
       }
     }
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [socket, isMyTurn]);
+  }, [activeSocket, enabled, isSocketProvided, storeMove, storeSocket]);
 }

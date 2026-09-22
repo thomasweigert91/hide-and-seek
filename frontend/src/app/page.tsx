@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 import { RoomList } from "@/components/RoomList";
 import { CreateRoomForm } from "@/components/CreateRoomForm";
 
@@ -13,15 +13,12 @@ type RoomInfo = {
 };
 
 export default function Home() {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
 
   useEffect(() => {
     const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8000";
     const newSocket = io(socketUrl);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSocket(newSocket);
 
     // Live-Update der Raumtabelle
     newSocket.on("roomsList", (list: RoomInfo[]) => {
@@ -48,7 +45,7 @@ export default function Home() {
           </div>
 
           <div className="w-full sm:w-80">
-            <CreateRoomForm socket={socket} />
+            <CreateRoomForm />
           </div>
         </div>
 
