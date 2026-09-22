@@ -3,21 +3,9 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { io, Socket } from "socket.io-client";
 import { GameBoard } from "@/components/GameBoard";
 import { useKeyboardMovement } from "@/hooks/useKeyboardMovement";
-
-type Position = { x: number; y: number };
-type Role = "SEEKER" | "HIDER";
-
-type GameState = {
-  status: "WAITING" | "RUNNING" | "FINISHED";
-  gridSize: number;
-  seekerPos: Position;
-  hiderPos: Position;
-  winner: Role | null;
-  timeRemaining: number;
-};
+import { useGameStore } from "@/store/useGameStore";
 
 export default function GameRoomPage({
   params,
@@ -27,83 +15,27 @@ export default function GameRoomPage({
   const { roomId } = use(params);
   const searchParams = useSearchParams();
   const isHost = searchParams.get("host") === "true";
+  const roomName = searchParams.get("name") || undefined;
+  const gridSize = Number(searchParams.get("gridSize")) || undefined;
 
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [role, setRole] = useState<Role | null>(isHost ? "SEEKER" : null);
-  const [statusMessage, setStatusMessage] = useState("Verbinde mit Server...");
   const [copied, setCopied] = useState(false);
 
+  const gameState = useGameStore((state) => state.gameState);
+  const role = useGameStore((state) => state.role);
+  const statusMessage = useGameStore((state) => state.statusMessage);
+  const connectRoom = useGameStore((state) => state.connectRoom);
+  const disconnectRoom = useGameStore((state) => state.disconnectRoom);
+  const restart = useGameStore((state) => state.restart);
+
   useEffect(() => {
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8000";
-    const newSocket = io(socketUrl);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSocket(newSocket);
-
-    const roomName = searchParams.get("name") || `Room ${roomId}`;
-
-    const gridSize = Number(searchParams.get("gridSize")) || 10;
-
-    newSocket.on("connect", () => {
-      if (isHost) {
-        newSocket.emit("createRoom", { roomId, roomName, gridSize });
-        setStatusMessage("Warte auf zweiten Spieler...");
-      } else {
-        newSocket.emit("joinRoom", { roomId });
-      }
-    });
-
-    newSocket.on("roleAssigned", (data: { role: Role }) => {
-      setRole(data.role);
-    });
-
-    newSocket.on("roomJoined", (data: { role: Role }) => {
-      setRole(data.role);
-    });
-
-    newSocket.on("gameStarted", (state: GameState) => {
-      setGameState(state);
-      setStatusMessage("Spiel läuft!");
-    });
-
-    newSocket.on("gameState", (state: GameState) => {
-      setGameState(state);
-      if (state.status === "FINISHED") {
-        setStatusMessage(`Spiel vorbei! Gewinner: ${state.winner}`);
-      }
-    });
-
-    newSocket.on("timer", (data: { timeRemaining: number }) => {
-      setGameState((prev) =>
-        prev ? { ...prev, timeRemaining: data.timeRemaining } : null,
-      );
-    });
-
-    newSocket.on("playerLeft", (data: { message: string }) => {
-      setStatusMessage(data.message);
-      setGameState((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "FINISHED",
-              winner: null,
-            }
-          : null,
-      );
-    });
-
-    newSocket.on("error", (err: { message: string }) => {
-      setStatusMessage(`Fehler: ${err.message}`);
-    });
+    connectRoom({ roomId, isHost, roomName, gridSize });
 
     return () => {
-      newSocket.emit("leaveRoom");
-      newSocket.disconnect();
+      disconnectRoom();
     };
-  }, [roomId, isHost]);
+  }, [roomId, isHost, roomName, gridSize, connectRoom, disconnectRoom]);
 
-  useKeyboardMovement(socket, gameState?.status === "RUNNING");
+  useKeyboardMovement(gameState?.status === "RUNNING");
 
   function copyInviteLink() {
     navigator.clipboard.writeText(window.location.href.split("?")[0]);
@@ -112,7 +44,7 @@ export default function GameRoomPage({
   }
 
   function handleRestart() {
-    socket?.emit("restart");
+    restart();
   }
 
   return (

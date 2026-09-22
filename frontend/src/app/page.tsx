@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 import { RoomList } from "@/components/RoomList";
 import { CreateRoomForm } from "@/components/CreateRoomForm";
 
