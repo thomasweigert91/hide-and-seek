@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
-import { playSound } from "@/lib/sound";
 
 export type Position = {
   x: number;
@@ -113,39 +112,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     });
 
     newSocket.on("gameState", (state: GameState) => {
-      set((prev) => {
-        const myRole = prev.role;
-        if (myRole && prev.gameState && state.status === "RUNNING") {
-          const oldPos =
-            myRole === "SEEKER"
-              ? prev.gameState.seekerPos
-              : prev.gameState.hiderPos;
-          const newPos = myRole === "SEEKER" ? state.seekerPos : state.hiderPos;
-
-          if (
-            oldPos &&
-            newPos &&
-            (oldPos.x !== newPos.x || oldPos.y !== newPos.y)
-          ) {
-            playSound("step");
-
-            const hadItem = prev.gameState.items?.[newPos.y]?.[newPos.x];
-            const hasItemNow = state.items?.[newPos.y]?.[newPos.x];
-
-            if (hadItem && !hasItemNow) {
-              playSound("coin");
-            }
-          }
-        }
-
-        return {
-          gameState: state,
-          statusMessage:
-            state.status === "FINISHED"
-              ? `Spiel vorbei! Gewinner: ${state.winner}`
-              : prev.statusMessage,
-        };
-      });
+      set((prev) => ({
+        gameState: state,
+        statusMessage:
+          state.status === "FINISHED"
+            ? `Spiel vorbei! Gewinner: ${state.winner}`
+            : prev.statusMessage,
+      }));
     });
 
     newSocket.on("timer", (data: { timeRemaining: number }) => {

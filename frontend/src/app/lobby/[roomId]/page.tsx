@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { GameBoard } from "@/components/GameBoard";
 import { useKeyboardMovement } from "@/hooks/useKeyboardMovement";
 import { useGameStore } from "@/store/useGameStore";
+import { useGameSounds } from "@/hooks/useGameSounds";
 
 export default function GameRoomPage({
   params,
@@ -46,6 +47,8 @@ export default function GameRoomPage({
   function handleRestart() {
     restart();
   }
+
+  useGameSounds();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 p-4 text-white">
