@@ -5,6 +5,7 @@ export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 export type TileKind = 'FLOOR' | 'WALL' | 'ICE';
 export type GameStatus = 'WAITING' | 'RUNNING' | 'FINISHED';
 export type Delta = { dx: number; dy: number };
+export type Terrain = TileKind[][];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -20,7 +21,7 @@ type GameState = {
   hiderPos: Position;
   timeRemaining: number;
   winner: Role | null;
-  terrain: TileKind[][];
+  terrain: Terrain;
 };
 
 const DELTAS: Record<Direction, Delta> = {
@@ -44,20 +45,80 @@ export class EventsService {
     }
   }
 
+  private hasPath(terrain: Terrain, gridSize: number): boolean {
+    const queue = [[0, 0]];
+    const visited = new Set<string>(['0,0']);
+
+    while (queue.length > 0) {
+      const [cx, cy] = queue.shift()!;
+
+      if (cx === gridSize - 1 && cy === gridSize - 1) {
+        return true;
+      }
+
+      for (const { dx, dy } of Object.values(DELTAS)) {
+        const neighborX = cx + dx;
+        const neighborY = cy + dy;
+
+        if (
+          neighborX >= 0 &&
+          neighborX < gridSize &&
+          neighborY >= 0 &&
+          neighborY < gridSize &&
+          terrain[neighborY][neighborX] !== 'WALL' &&
+          !visited.has(`${neighborX},${neighborY}`)
+        ) {
+          visited.add(`${neighborX},${neighborY}`);
+          queue.push([neighborX, neighborY]);
+        }
+      }
+    }
+    return false;
+  }
+
+  private generateRandomMap(gridSize: number): Terrain {
+    let terrain: Terrain;
+    let attempts = 0;
+
+    do {
+      terrain = Array.from({ length: gridSize }, () =>
+        Array.from({ length: gridSize }, () => 'FLOOR'),
+      );
+
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const isSeekerStart = x <= 1 && y <= 1;
+          const isHiderStart = x >= gridSize - 2 && y >= gridSize - 2;
+
+          if (isSeekerStart || isHiderStart) continue;
+
+          const random = Math.random();
+
+          if (random < 0.15) {
+            terrain[y][x] = 'WALL';
+          } else if (random < 0.27) {
+            terrain[y][x] = 'ICE';
+          }
+        }
+      }
+      attempts++;
+    } while (!this.hasPath(terrain, gridSize) && attempts < 20);
+
+    return terrain;
+  }
+
   createGame(roomId: string, gridSize: number = 10): GameState {
-    const terrain: TileKind[][] = Array.from({ length: gridSize }, () =>
-      Array.from({ length: gridSize }, () => 'FLOOR'),
-    );
-    const wallY = Math.floor(gridSize / 2);
+    const terrain = this.generateRandomMap(gridSize);
+    // const wallY = Math.floor(gridSize / 2);
 
-    for (let x = 1; x <= gridSize - 3; x++) {
-      terrain[wallY][x] = 'WALL';
-    }
+    // for (let x = 1; x <= gridSize - 3; x++) {
+    //   terrain[wallY][x] = 'WALL';
+    // }
 
-    const iceY = wallY + 2;
-    for (let x = 1; x <= gridSize - 3; x++) {
-      terrain[iceY][x] = 'ICE';
-    }
+    // const iceY = wallY + 2;
+    // for (let x = 1; x <= gridSize - 3; x++) {
+    //   terrain[iceY][x] = 'ICE';
+    // }
 
     const initialState: GameState = {
       gridSize,
