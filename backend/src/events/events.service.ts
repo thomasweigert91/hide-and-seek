@@ -37,9 +37,16 @@ export class EventsService {
       Array.from({ length: gridSize }, () => 'FLOOR'),
     );
     const wallY = Math.floor(gridSize / 2);
+
     for (let x = 1; x <= gridSize - 3; x++) {
       terrain[wallY][x] = 'WALL';
     }
+
+    const iceY = wallY + 2;
+    for (let x = 1; x <= gridSize - 3; x++) {
+      terrain[iceY][x] = 'ICE';
+    }
+
     const initialState: GameState = {
       gridSize,
       seekerPos: { x: 0, y: 0 },
