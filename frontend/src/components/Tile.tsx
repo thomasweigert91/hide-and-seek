@@ -1,8 +1,9 @@
 import { FC, ReactNode } from "react";
-import { TileKind } from "@/store/useGameStore";
+import { TileKind, ItemKind } from "@/store/useGameStore";
 
 type TileProps = {
   kind: TileKind;
+  item?: ItemKind | null;
   x: number;
   y: number;
   fogged: boolean;
@@ -24,12 +25,17 @@ const tileStyles: Record<TileKind, { even: string; odd: string }> = {
   },
 };
 
-export const Tile: FC<TileProps> = ({ kind, x, y, fogged, children }) => {
+export const Tile: FC<TileProps> = ({ kind, x, y, fogged, children, item }) => {
   const base =
     "relative flex items-center justify-center rounded transition-all duration-200 border";
   const look = fogged
     ? "bg-zinc-950 border-zinc-900 opacity-30"
     : tileStyles[kind][(x + y) % 2 === 0 ? "even" : "odd"];
 
-  return <div className={`${base} ${look}`}>{children}</div>;
+  return (
+    <div className={`${base} ${look}`}>
+      {!fogged && item && <span className="absolute text-sm">⏱️</span>}
+      {children}
+    </div>
+  );
 };

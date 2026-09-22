@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FC } from "react";
 import { Tile } from "./Tile";
-import { TileKind } from "@/store/useGameStore";
+import { TileKind, ItemKind } from "@/store/useGameStore";
 
 type GameBoardProps = {
   gridSize?: number;
@@ -9,7 +9,9 @@ type GameBoardProps = {
   hiderPos?: { x: number; y: number };
   myRole?: "SEEKER" | "HIDER";
   terrain?: TileKind[][];
+  items?: (ItemKind | null)[][];
 };
+
 const VISION_RADIUS = 1;
 
 export const GameBoard: FC<GameBoardProps> = ({
@@ -18,6 +20,7 @@ export const GameBoard: FC<GameBoardProps> = ({
   hiderPos = { x: 6, y: 7 },
   myRole,
   terrain,
+  items,
 }) => {
   const cells = Array.from({ length: gridSize * gridSize }, (_, index) => {
     const x = index % gridSize;

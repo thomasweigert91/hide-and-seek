@@ -112,6 +112,7 @@ export default function GameRoomPage({
           hiderPos={gameState.hiderPos}
           myRole={role ?? "SEEKER"}
           terrain={gameState.terrain}
+          items={gameState.items}
         />
       )}
     </div>

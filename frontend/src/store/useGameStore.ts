@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
+import { playSound } from "@/lib/sound";
 
 export type Position = {
   x: number;
@@ -20,6 +21,7 @@ export type GameState = {
   winner: Role | null;
   timeRemaining: number;
   terrain: TileKind[][];
+  items: (ItemKind | null)[][];
 };
 
 export type ConnectRoomOptions = {
@@ -45,6 +47,8 @@ export type GameStoreState = {
   restart: () => void;
   reset: () => void;
 };
+
+export type ItemKind = "TIME";
 
 const initialState = {
   socket: null,
@@ -109,13 +113,32 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     });
 
     newSocket.on("gameState", (state: GameState) => {
-      set((prev) => ({
-        gameState: state,
-        statusMessage:
-          state.status === "FINISHED"
-            ? `Spiel vorbei! Gewinner: ${state.winner}`
-            : prev.statusMessage,
-      }));
+      set((prev) => {
+        const myRole = prev.role;
+        if (myRole && prev.gameState && state.status === "RUNNING") {
+          const oldPos =
+            myRole === "SEEKER"
+              ? prev.gameState.seekerPos
+              : prev.gameState.hiderPos;
+          const newPos = myRole === "SEEKER" ? state.seekerPos : state.hiderPos;
+
+          if (
+            oldPos &&
+            newPos &&
+            (oldPos.x !== newPos.x || oldPos.y !== newPos.y)
+          ) {
+            playSound("step");
+          }
+        }
+
+        return {
+          gameState: state,
+          statusMessage:
+            state.status === "FINISHED"
+              ? `Spiel vorbei! Gewinner: ${state.winner}`
+              : prev.statusMessage,
+        };
+      });
     });
 
     newSocket.on("timer", (data: { timeRemaining: number }) => {

@@ -7,6 +7,12 @@ export type GameStatus = 'WAITING' | 'RUNNING' | 'FINISHED';
 export type Delta = { dx: number; dy: number };
 export type Terrain = TileKind[][];
 
+export type ItemKind = 'TIME';
+export type Items = (ItemKind | null)[][];
+
+const itemCount = 3;
+const timeBonus = 10;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface Position {
@@ -22,6 +28,7 @@ type GameState = {
   timeRemaining: number;
   winner: Role | null;
   terrain: Terrain;
+  items: Items;
 };
 
 const DELTAS: Record<Direction, Delta> = {
@@ -43,6 +50,18 @@ export class EventsService {
       state.status = 'FINISHED';
       state.winner = 'SEEKER';
     }
+  }
+
+  private checkPickup(state: GameState, role: Role) {
+    const pos = role === 'SEEKER' ? state.seekerPos : state.hiderPos;
+    const item = state.items[pos.y][pos.x];
+
+    if (!item) return;
+
+    state.items[pos.y][pos.x] = null;
+
+    const delta = role === 'SEEKER' ? timeBonus : -timeBonus;
+    state.timeRemaining = Math.max(1, state.timeRemaining + delta);
   }
 
   private hasPath(terrain: Terrain, gridSize: number): boolean {
@@ -107,8 +126,36 @@ export class EventsService {
     return terrain;
   }
 
+  private placeItems(terrain: Terrain, gridSize: number): Items {
+    const items: Items = Array.from({ length: gridSize }, () =>
+      Array.from({ length: gridSize }, () => null),
+    );
+    let placed = 0;
+    let attempts = 0;
+
+    while (placed < itemCount && attempts < 200) {
+      attempts++;
+
+      const x = Math.floor(Math.random() * gridSize);
+      const y = Math.floor(Math.random() * gridSize);
+
+      const isSeekerStart = x <= 1 && y <= 1;
+      const isHiderStart = x >= gridSize - 2 && y >= gridSize - 2;
+
+      if (isSeekerStart || isHiderStart) continue;
+      if (terrain[y][x] === 'WALL') continue;
+      if (items[y][x]) continue;
+
+      items[y][x] = 'TIME';
+      placed++;
+    }
+    return items;
+  }
+
   createGame(roomId: string, gridSize: number = 10): GameState {
     const terrain = this.generateRandomMap(gridSize);
+
+    const items = this.placeItems(terrain, gridSize);
     // const wallY = Math.floor(gridSize / 2);
 
     // for (let x = 1; x <= gridSize - 3; x++) {
@@ -128,6 +175,7 @@ export class EventsService {
       winner: null,
       timeRemaining: 60,
       terrain,
+      items,
     };
 
     this.games.set(roomId, initialState);
@@ -166,7 +214,10 @@ export class EventsService {
 
     currentPos.x = nextX;
     currentPos.y = nextY;
+
+    this.checkPickup(state, role);
     this.checkCatch(state);
+
     onStep(state);
     while (
       state.terrain[currentPos.y][currentPos.x] === 'ICE' &&
@@ -190,6 +241,7 @@ export class EventsService {
 
       currentPos.x = slideX;
       currentPos.y = slideY;
+      this.checkPickup(state, role);
       this.checkCatch(state);
       onStep(state);
     }
