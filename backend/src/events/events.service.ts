@@ -6,6 +6,8 @@ export type TileKind = 'FLOOR' | 'WALL' | 'ICE';
 export type GameStatus = 'WAITING' | 'RUNNING' | 'FINISHED';
 export type Delta = { dx: number; dy: number };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface Position {
   x: number;
   y: number;
@@ -31,6 +33,16 @@ const DELTAS: Record<Direction, Delta> = {
 @Injectable()
 export class EventsService {
   private games = new Map<string, GameState>();
+
+  private checkCatch(state: GameState) {
+    if (
+      state.seekerPos.x === state.hiderPos.x &&
+      state.seekerPos.y === state.hiderPos.y
+    ) {
+      state.status = 'FINISHED';
+      state.winner = 'SEEKER';
+    }
+  }
 
   createGame(roomId: string, gridSize: number = 10): GameState {
     const terrain: TileKind[][] = Array.from({ length: gridSize }, () =>
@@ -68,45 +80,58 @@ export class EventsService {
     this.games.delete(roomId);
   }
 
-  applyMove(roomId: string, role: Role, direction: Direction) {
+  async applyMove(
+    roomId: string,
+    role: Role,
+    direction: Direction,
+    onStep: (state: GameState) => void,
+  ): Promise<GameState | null> {
     const state = this.games.get(roomId);
-
     if (!state || state.status !== 'RUNNING') return null;
-
     const currentPos = role === 'SEEKER' ? state.seekerPos : state.hiderPos;
-
     const delta = DELTAS[direction];
-
-    const newX = currentPos.x + delta.dx;
-    const newY = currentPos.y + delta.dy;
-
+    const nextX = currentPos.x + delta.dx;
+    const nextY = currentPos.y + delta.dy;
+    // 1. Spielfeldrand & Wand prüfen
     if (
-      newX < 0 ||
-      newX >= state.gridSize ||
-      newY < 0 ||
-      newY >= state.gridSize
+      nextX < 0 ||
+      nextX >= state.gridSize ||
+      nextY < 0 ||
+      nextY >= state.gridSize ||
+      state.terrain[nextY][nextX] === 'WALL'
     ) {
       return state;
     }
 
-    if (state.terrain[newY][newX] === 'WALL') {
-      return state;
-    }
-
-    if (role === 'SEEKER') {
-      state.seekerPos = { x: newX, y: newY };
-    } else {
-      state.hiderPos = { x: newX, y: newY };
-    }
-
-    if (
-      state.seekerPos.x === state.hiderPos.x &&
-      state.seekerPos.y === state.hiderPos.y
+    currentPos.x = nextX;
+    currentPos.y = nextY;
+    this.checkCatch(state);
+    onStep(state);
+    while (
+      state.terrain[currentPos.y][currentPos.x] === 'ICE' &&
+      state.status === 'RUNNING'
     ) {
-      state.status = 'FINISHED';
-      state.winner = 'SEEKER';
-    }
+      await sleep(200);
 
+      if (state.status !== 'RUNNING') break;
+      const slideX = currentPos.x + delta.dx;
+      const slideY = currentPos.y + delta.dy;
+
+      if (
+        slideX < 0 ||
+        slideX >= state.gridSize ||
+        slideY < 0 ||
+        slideY >= state.gridSize ||
+        state.terrain[slideY][slideX] === 'WALL'
+      ) {
+        break;
+      }
+
+      currentPos.x = slideX;
+      currentPos.y = slideY;
+      this.checkCatch(state);
+      onStep(state);
+    }
     return state;
   }
 }
