@@ -24,8 +24,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(private readonly eventsService: EventsService) {}
 
-  private waitingRoomId: string | null = null;
-
   private timers = new Map<string, NodeJS.Timeout>();
   private rooms = new Map<string, RoomInfo>();
 
@@ -129,39 +127,42 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leaveRoom')
   handleLeaveRoom(@ConnectedSocket() socket: Socket) {
     const roomId = socket.data.roomId;
-    if (roomId) {
+
+    if (!roomId) return;
+    const roomInfo = this.rooms.get(roomId);
+
+    if (roomInfo && roomInfo.status === 'IN_GAME') {
       this.stopTimer(roomId);
-      this.server.to(roomId).emit('playerLeft', {
+      socket.to(roomId).emit('playerLeft', {
         message: 'Your opponent left the game. You won!',
       });
+
       this.eventsService.deleteGame(roomId);
-      this.rooms.delete(roomId);
-      this.broadcastRoomlist();
-      socket.leave(roomId);
-      socket.data.roomId = null;
-      socket.data.role = null;
     }
+    this.rooms.delete(roomId);
+    this.broadcastRoomlist();
+    socket.leave(roomId);
+    socket.data.roomId = null;
+    socket.data.role = null;
   }
 
   handleDisconnect(socket: Socket) {
     const roomId = socket.data.roomId;
 
-    if (roomId === this.waitingRoomId) {
-      this.waitingRoomId = null;
-      console.log('Waiting player has left, room resetted');
-      return;
-    }
+    if (!roomId) return;
 
-    if (roomId) {
+    const roomInfo = this.rooms.get(roomId);
+
+    if (roomInfo && roomInfo.status === 'IN_GAME') {
       this.stopTimer(roomId);
-      this.server.to(roomId).emit('playerLeft', {
+      socket.to(roomId).emit('playerLeft', {
         message: 'Your opponent has quit. You won!',
       });
 
       this.eventsService.deleteGame(roomId);
-      this.rooms.delete(roomId);
-      this.broadcastRoomlist();
     }
+    this.rooms.delete(roomId);
+    this.broadcastRoomlist();
   }
 
   handleConnection(socket: Socket) {
