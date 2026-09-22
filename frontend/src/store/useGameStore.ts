@@ -128,6 +128,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             (oldPos.x !== newPos.x || oldPos.y !== newPos.y)
           ) {
             playSound("step");
+
+            const hadItem = prev.gameState.items?.[newPos.y]?.[newPos.x];
+            const hasItemNow = state.items?.[newPos.y]?.[newPos.x];
+
+            if (hadItem && !hasItemNow) {
+              playSound("coin");
+            }
           }
         }
 

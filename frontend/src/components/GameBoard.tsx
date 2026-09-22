@@ -71,6 +71,7 @@ export const GameBoard: FC<GameBoardProps> = ({
             <Tile
               key={`${x}-${y}`}
               kind={terrain?.[y]?.[x] ?? "FLOOR"}
+              item={items?.[y]?.[x] ?? null}
               x={x}
               y={y}
               fogged={!inVision}

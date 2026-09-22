@@ -26,6 +26,8 @@ const tileStyles: Record<TileKind, { even: string; odd: string }> = {
 };
 
 export const Tile: FC<TileProps> = ({ kind, x, y, fogged, children, item }) => {
+  console.log("🚀 ~ Tile ~ item:", item);
+
   const base =
     "relative flex items-center justify-center rounded transition-all duration-200 border";
   const look = fogged
@@ -34,7 +36,7 @@ export const Tile: FC<TileProps> = ({ kind, x, y, fogged, children, item }) => {
 
   return (
     <div className={`${base} ${look}`}>
-      {!fogged && item && <span className="absolute text-sm">⏱️</span>}
+      {!fogged && item && <span className="absolute text-md">⏱️</span>}
       {children}
     </div>
   );
