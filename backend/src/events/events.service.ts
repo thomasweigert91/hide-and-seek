@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 export type Role = 'SEEKER' | 'HIDER';
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
-export type TileKind = 'FLOOR' | 'WALL' | 'ICE';
+export type TileKind = 'FLOOR' | 'WALL' | 'ICE' | 'MUD';
 export type GameStatus = 'WAITING' | 'RUNNING' | 'FINISHED';
 export type Delta = { dx: number; dy: number };
 export type Terrain = TileKind[][];
@@ -120,10 +120,16 @@ export class EventsService {
 
           const random = Math.random();
 
-          if (random < 0.15) {
-            terrain[y][x] = 'WALL';
-          } else if (random < 0.27) {
-            terrain[y][x] = 'ICE';
+          switch (true) {
+            case random < 0.15:
+              terrain[y][x] = 'WALL';
+              break;
+            case random < 0.22:
+              terrain[y][x] = 'ICE';
+              break;
+            case random < 0.3:
+              terrain[y][x] = 'MUD';
+              break;
           }
         }
       }
@@ -163,16 +169,6 @@ export class EventsService {
     const terrain = this.generateRandomMap(gridSize);
 
     const items = this.placeItems(terrain, gridSize);
-    // const wallY = Math.floor(gridSize / 2);
-
-    // for (let x = 1; x <= gridSize - 3; x++) {
-    //   terrain[wallY][x] = 'WALL';
-    // }
-
-    // const iceY = wallY + 2;
-    // for (let x = 1; x <= gridSize - 3; x++) {
-    //   terrain[iceY][x] = 'ICE';
-    // }
 
     const initialState: GameState = {
       gridSize,
@@ -234,6 +230,13 @@ export class EventsService {
     }
     this.checkCatch(state);
     onStep(state);
+
+    if (
+      state.terrain[currentPos.y][currentPos.x] === 'MUD' &&
+      state.status === 'RUNNING'
+    ) {
+      await sleep(1200);
+    }
 
     while (
       state.terrain[currentPos.y][currentPos.x] === 'ICE' &&

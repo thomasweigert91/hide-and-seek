@@ -23,6 +23,10 @@ const tileStyles: Record<TileKind, { even: string; odd: string }> = {
     even: "bg-sky-900/40 border-sky-700/30",
     odd: "bg-sky-900/40 border-sky-700/30",
   },
+  MUD: {
+    even: "bg-amber-950/70 border-amber-900/40",
+    odd: "bg-amber-900/50 border-amber-900/40",
+  },
 };
 
 export const Tile: FC<TileProps> = ({ kind, x, y, fogged, children, item }) => {

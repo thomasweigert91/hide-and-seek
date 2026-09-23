@@ -26,7 +26,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private timers = new Map<string, NodeJS.Timeout>();
   private rooms = new Map<string, RoomInfo>();
-  private slidingPlayers = new Set<string>();
+  private lockedPlayers = new Set<string>();
 
   private broadcastRoomlist() {
     const list = Array.from(this.rooms.values());
@@ -77,8 +77,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { roomId, role } = socket.data;
     if (!role || !roomId) return;
-    if (this.slidingPlayers.has(socket.id)) return;
-    this.slidingPlayers.add(socket.id);
+    if (this.lockedPlayers.has(socket.id)) return;
+    this.lockedPlayers.add(socket.id);
+
     try {
       await this.eventsService.applyMove(
         roomId,
@@ -100,7 +101,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
       );
     } finally {
-      this.slidingPlayers.delete(socket.id);
+      this.lockedPlayers.delete(socket.id);
     }
   }
 

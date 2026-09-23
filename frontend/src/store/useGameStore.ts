@@ -11,7 +11,7 @@ export type Role = "SEEKER" | "HIDER";
 
 export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
-export type TileKind = "FLOOR" | "WALL" | "ICE";
+export type TileKind = "FLOOR" | "WALL" | "ICE" | "MUD";
 
 export type GameState = {
   status: "WAITING" | "RUNNING" | "FINISHED";
