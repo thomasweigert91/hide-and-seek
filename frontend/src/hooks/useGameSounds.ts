@@ -20,13 +20,6 @@ export function useGameSounds() {
 
     if (oldPos.x !== newPos.x || oldPos.y !== newPos.y) {
       playSound("step");
-
-      if (
-        prevState.items?.[newPos.y]?.[newPos.x] &&
-        !gameState.items?.[newPos.y]?.[newPos.x]
-      ) {
-        playSound("coin");
-      }
     }
   }, [gameState, role]);
 }

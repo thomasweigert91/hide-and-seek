@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
+import { playSound } from "@/lib/sound";
 
 export type Position = {
   x: number;
@@ -143,6 +144,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         error: err.message,
         statusMessage: `Fehler: ${err.message}`,
       });
+    });
+
+    newSocket.on("itemCollected", (data) => {
+      const myRole = get().role;
+
+      if (data.role === myRole) {
+        playSound("coin");
+      }
     });
 
     newSocket.on("disconnect", () => {

@@ -91,6 +91,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
           this.server.to(roomId).emit('gameState', updatedState);
         },
+        (pickupData) => {
+          this.server.to(roomId).emit('itemCollected', {
+            role: pickupData.role,
+            itemType: pickupData.item,
+            pos: pickupData.pos,
+          });
+        },
       );
     } finally {
       this.slidingPlayers.delete(socket.id);

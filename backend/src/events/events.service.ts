@@ -52,16 +52,23 @@ export class EventsService {
     }
   }
 
-  private checkPickup(state: GameState, role: Role) {
+  private checkPickup(
+    state: GameState,
+    role: Role,
+  ): { item: ItemKind; pos: Position } | null {
     const pos = role === 'SEEKER' ? state.seekerPos : state.hiderPos;
     const item = state.items[pos.y][pos.x];
 
-    if (!item) return;
+    if (!item) return null;
 
     state.items[pos.y][pos.x] = null;
 
-    const delta = role === 'SEEKER' ? timeBonus : -timeBonus;
-    state.timeRemaining = Math.max(1, state.timeRemaining + delta);
+    switch (item) {
+      case 'TIME':
+        const delta = role === 'SEEKER' ? timeBonus : -timeBonus;
+        state.timeRemaining = Math.max(1, state.timeRemaining + delta);
+    }
+    return { item, pos: { ...pos } };
   }
 
   private hasPath(terrain: Terrain, gridSize: number): boolean {
@@ -194,6 +201,11 @@ export class EventsService {
     role: Role,
     direction: Direction,
     onStep: (state: GameState) => void,
+    onItemCollected?: (data: {
+      role: Role;
+      item: ItemKind;
+      pos: Position;
+    }) => void,
   ): Promise<GameState | null> {
     const state = this.games.get(roomId);
     if (!state || state.status !== 'RUNNING') return null;
@@ -215,10 +227,14 @@ export class EventsService {
     currentPos.x = nextX;
     currentPos.y = nextY;
 
-    this.checkPickup(state, role);
-    this.checkCatch(state);
+    const picked = this.checkPickup(state, role);
 
+    if (picked) {
+      onItemCollected?.({ role, item: picked.item, pos: picked.pos });
+    }
+    this.checkCatch(state);
     onStep(state);
+
     while (
       state.terrain[currentPos.y][currentPos.x] === 'ICE' &&
       state.status === 'RUNNING'
@@ -241,7 +257,15 @@ export class EventsService {
 
       currentPos.x = slideX;
       currentPos.y = slideY;
-      this.checkPickup(state, role);
+      const slidePicked = this.checkPickup(state, role);
+
+      if (slidePicked)
+        onItemCollected?.({
+          role,
+          item: slidePicked.item,
+          pos: slidePicked.pos,
+        });
+
       this.checkCatch(state);
       onStep(state);
     }
