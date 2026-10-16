@@ -4,6 +4,9 @@ Ein Echtzeit-Multiplayer-Versteckspiel für zwei Spieler im Browser. Ein **Suche
 
 Das Projekt ist ein npm-Workspaces-Monorepo aus einem **Next.js**-Frontend, einem **NestJS**-Backend mit **Socket.IO** und einem gemeinsamen **Drizzle ORM**-Datenbankpaket.
 
+<img width="612" height="817" alt="image" src="https://github.com/user-attachments/assets/35cf3a38-17de-4040-a171-6bbab0c99b4a" />
+
+
 ---
 
 ## Inhaltsverzeichnis
